@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import { Send, Bot, User, AlertCircle, Settings, Copy, Download, Trash2, Moon, Sun, Zap, MessageSquare, RefreshCw, Plus, Edit3, Check, X, Menu, Sidebar } from 'lucide-react'
 
 type ChatMessage = {
@@ -47,15 +47,17 @@ export default function OllamaChatUI() {
   const inputRef = useRef<HTMLTextAreaElement>(null)
 
   const currentChat = chats.find(chat => chat.id === currentChatId)
-  const messages = currentChat?.messages || []
+  const messages = useMemo(() => currentChat?.messages || [], [currentChat])
 
-  const scrollToBottom = () => {
+  const scrollToBottom = (): void => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }
 
   useEffect(() => {
     scrollToBottom()
   }, [messages])
+
+
 
   useEffect(() => {
     inputRef.current?.focus()
@@ -69,11 +71,11 @@ export default function OllamaChatUI() {
     try {
       const cached = localStorage.getItem(STORAGE_KEY)
       if (cached) {
-        const parsedChats = JSON.parse(cached).map((chat: any) => ({
+        const parsedChats = (JSON.parse(cached) as Chat[]).map((chat: Chat) => ({
           ...chat,
           createdAt: new Date(chat.createdAt),
           updatedAt: new Date(chat.updatedAt),
-          messages: chat.messages.map((msg: any) => ({
+          messages: chat.messages.map((msg: ChatMessage) => ({
             ...msg,
             timestamp: new Date(msg.timestamp)
           }))
@@ -167,12 +169,12 @@ export default function OllamaChatUI() {
     saveChatsToCache(updatedChats)
   }
 
-  const checkOllamaConnection = async () => {
+  const checkOllamaConnection = useCallback(async () => {
     try {
       const response = await fetch(`${ollamaUrl}/api/tags`)
       if (response.ok) {
         const data = await response.json()
-        const modelNames = data.models?.map((model: any) => model.name) || []
+        const modelNames = data.models?.map((model: { name: string }) => model.name) || []
         if (modelNames.length > 0) {
           setAvailableModels(modelNames)
           if (!modelNames.includes(selectedModel)) {
@@ -184,7 +186,7 @@ export default function OllamaChatUI() {
     } catch (err) {
       console.log('Ollama connection check failed:', err)
     }
-  }
+  }, [ollamaUrl, selectedModel])
 
   const handleSend = async () => {
     if (!prompt.trim() || isLoading) return
@@ -299,7 +301,7 @@ export default function OllamaChatUI() {
 
       for (const line of lines) {
         try {
-          const data: any = JSON.parse(line)
+          const data: OllamaResponseChunk = JSON.parse(line)
           
           if (data.error) {
             throw new Error(data.error)
@@ -308,7 +310,7 @@ export default function OllamaChatUI() {
           if (data.done) continue
 
           // Handle both generate and chat API responses
-          const content = data.response || data.message?.content || ''
+          const content = (data as OllamaResponseChunk & { response?: string }).response || data.message?.content || ''
           if (content) {
             botContent += content
             const updatedMessages = [...initialMessages]
@@ -723,7 +725,7 @@ export default function OllamaChatUI() {
           )}
 
           <div className="space-y-6 p-6">
-            {messages.map((message, index) => (
+            {messages.map((message) => (
               <div
                 key={message.id}
                 className="group"
