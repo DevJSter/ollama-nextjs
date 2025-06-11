@@ -31,10 +31,11 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     inputRef.current?.focus()
   }, [])
 
-  // Reset height when prompt is cleared
+  // Handle external prompt changes (like clearing)
   useEffect(() => {
-    if (!prompt && inputRef.current) {
+    if (inputRef.current) {
       inputRef.current.style.height = 'auto'
+      inputRef.current.style.height = Math.min(inputRef.current.scrollHeight, 120) + 'px'
     }
   }, [prompt])
 
@@ -67,7 +68,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           <button
             onClick={onSend}
             disabled={!prompt.trim() || isLoading}
-            className={`absolute right-2 top-1/2 transform -translate-y-1/2 p-2 rounded-lg transition-all duration-200 flex items-center justify-center ${
+            className={`absolute right-2 top-1/2 transform -translate-y-1/2 -mt-1 p-2 rounded-lg transition-all duration-200 flex items-center justify-center ${
               !prompt.trim() || isLoading
                 ? (isDark ? 'bg-neutral-700 text-neutral-500 cursor-not-allowed' : 'bg-neutral-200 text-neutral-400 cursor-not-allowed')
                 : (isDark ? 'bg-neutral-600 text-white hover:bg-neutral-500 active:scale-95' : 'bg-neutral-800 text-white hover:bg-neutral-700 active:scale-95')

@@ -57,19 +57,20 @@ export default function OllamaChatUI() {
   const handleSend = async () => {
     if (!prompt.trim() || isLoading) return
 
+    const currentPrompt = prompt.trim()
+    // Clear prompt immediately on send
+    setPrompt('')
+
     // Create new chat if none exists and send message after creation
     if (!currentChatId) {
       createNewChat((newChatId) => {
         // Send message with the new chat ID
-        sendMessage(prompt, [], newChatId).then(() => {
-          setPrompt('')
-        })
+        sendMessage(currentPrompt, [], newChatId)
       })
       return
     }
 
-    await sendMessage(prompt, messages, currentChatId)
-    setPrompt('')
+    await sendMessage(currentPrompt, messages, currentChatId)
   }
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -80,7 +81,9 @@ export default function OllamaChatUI() {
       } else {
         // Send message with Enter
         e.preventDefault()
-        handleSend()
+        if (prompt.trim() && !isLoading) {
+          handleSend()
+        }
       }
     }
   }
